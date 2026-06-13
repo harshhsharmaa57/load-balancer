@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 )
@@ -43,9 +44,16 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		b := nextBackend(backends)
+		if b == nil {
+			http.Error(w, "No Healthy connection", 502)
+			return
+		}
+
 		log.Printf("routing → %s", b.URL.Host)
+
 		b.Proxy.ServeHTTP(w, r)
 	})
-
+	startHealthCheck(backends)
+	fmt.Println("Server running at port http://localhost:8080/")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
