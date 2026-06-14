@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+	"time"
 )
 
 // type Backend struct {
@@ -43,24 +43,32 @@ func main() {
 	backends := reverseProxy()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
 		b := nextBackend(backends)
+
 		if b == nil {
-			http.Error(w, "No Healthy connection", 502)
+			http.Error(w, "no healthy backends", 503)
 			return
 		}
 
-		log.Printf("routing → %s", b.URL.Host)
-
 		b.Proxy.ServeHTTP(w, r)
+
+		log.Printf("[%s] %s %s  →  %s  (%v)",
+			time.Now().Format("15:04:05"),
+			r.Method,
+			r.URL.Path,
+			b.URL.Host,
+			time.Since(start),
+		)
 	})
 	startHealthCheck(backends)
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: http.DefaultServeMux,
 
-		ReadTimeout:  5 * time.Second,   // time to read the request
-		WriteTimeout: 10 * time.Second,  // time to write the response
-		IdleTimeout:  60 * time.Second,  // keep-alive connection idle
+		ReadTimeout:  5 * time.Second,  // time to read the request
+		WriteTimeout: 10 * time.Second, // time to write the response
+		IdleTimeout:  60 * time.Second, // keep-alive connection idle
 	}
 
 	log.Println("LB starting on :8080")
