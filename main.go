@@ -54,6 +54,16 @@ func main() {
 		b.Proxy.ServeHTTP(w, r)
 	})
 	startHealthCheck(backends)
-	fmt.Println("Server running at port http://localhost:8080/")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: http.DefaultServeMux,
+
+		ReadTimeout:  5 * time.Second,   // time to read the request
+		WriteTimeout: 10 * time.Second,  // time to write the response
+		IdleTimeout:  60 * time.Second,  // keep-alive connection idle
+	}
+
+	log.Println("LB starting on :8080")
+	log.Fatal(srv.ListenAndServe())
+
 }
