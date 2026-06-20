@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -154,7 +155,6 @@ func stressTest(targetURL string, concurrency int, totalRequests int, timeout ti
 
 			body, err := io.ReadAll(resp.Body)
 			resp.Body.Close()
-
 			if err != nil {
 				stats.recordFailure()
 				return
@@ -186,26 +186,23 @@ func main() {
 	)
 	flag.Parse()
 
-	fmt.Println("🔥 Go Stress Test Tool")
-	fmt.Printf("Config: %d concurrent, %d total requests, %v timeout\n\n", *concurrency, *requests, *timeout)
+	log.Println("🔥 Go Stress Test Tool")
+	log.Printf("Config: %d concurrent, %d total requests, %v timeout", *concurrency, *requests, *timeout)
 
 	if *compare {
-		// ===== TEST SINGLE SERVER =====
-		fmt.Println("🖥️  Testing SINGLE SERVER...")
+		log.Println("🖥️  Testing SINGLE SERVER...")
 		time.Sleep(2 * time.Second)
 		stats1, dur1 := stressTest(*singleURL, *concurrency, *requests, *timeout)
 		stats1.print("SINGLE SERVER RESULTS", dur1)
 
-		// ===== TEST LOAD BALANCER =====
-		fmt.Println("\n🔄 Testing LOAD BALANCER...")
+		log.Println("\n🔄 Testing LOAD BALANCER...")
 		time.Sleep(2 * time.Second)
 		stats2, dur2 := stressTest(*lbURL, *concurrency, *requests, *timeout)
 		stats2.print("LOAD BALANCER RESULTS", dur2)
 
-		// ===== COMPARISON =====
-		fmt.Println("\n" + strings.Repeat("=", 60))
-		fmt.Println("  📈 COMPARISON: Load Balancer vs Single Server")
-		fmt.Println(strings.Repeat("=", 60))
+		log.Println("\n" + strings.Repeat("=", 60))
+		log.Println("  📈 COMPARISON: Load Balancer vs Single Server")
+		log.Println(strings.Repeat("=", 60))
 
 		rps1 := float64(stats1.TotalRequests) / dur1.Seconds()
 		rps2 := float64(stats2.TotalRequests) / dur2.Seconds()
@@ -223,14 +220,12 @@ func main() {
 		fmt.Println(strings.Repeat("=", 60))
 
 		if rps2 > rps1 {
-			fmt.Println("  ✅ Load Balancer is FASTER")
+			log.Println("  ✅ Load Balancer is FASTER")
 		} else if rps1 > rps2 {
-			fmt.Println("  ⚠️  Single Server was faster (LB overhead or backends down?)")
+			log.Println("  ⚠️  Single Server was faster (LB overhead or backends down?)")
 		} else {
-			fmt.Println("  ⚖️  Roughly equal performance")
+			log.Println("  ⚖️  Roughly equal performance")
 		}
-		fmt.Println()
-
 	} else {
 		stats, duration := stressTest(*target, *concurrency, *requests, *timeout)
 		stats.print("STRESS TEST RESULTS", duration)

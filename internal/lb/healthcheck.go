@@ -1,4 +1,4 @@
-package main
+package lb
 
 import (
 	"net"
@@ -7,15 +7,10 @@ import (
 )
 
 func isBackendAlive(u *url.URL) bool {
-	con, err := net.DialTimeout(
-		"tcp",
-		u.Host,
-		2*time.Second,
-	)
-
+	conn, err := net.DialTimeout("tcp", u.Host, 2*time.Second)
 	if err != nil {
 		return false
 	}
-	con.Close()
+	conn.Close()
 	return true
 }

@@ -1,4 +1,4 @@
-package main
+package lb
 
 import (
 	"net/http/httputil"
@@ -10,22 +10,22 @@ type Backend struct {
 	URL   *url.URL
 	Proxy *httputil.ReverseProxy
 	Alive bool
-	mu    sync.RWMutex // protects Alive
+	mu    sync.RWMutex
 }
 
 func (b *Backend) SetAlive(alive bool) {
-	b.mu.Lock() // only 1 can write
+	b.mu.Lock()
 	b.Alive = alive
 	b.mu.Unlock()
 }
 
 func (b *Backend) isAlive() bool {
-	b.mu.RLock() // shared read (many can read at once)
+	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.Alive
 }
 
-func reverseProxy() []*Backend {
+func NewBackends() []*Backend {
 	rawURLs := []string{
 		"http://localhost:9001",
 		"http://localhost:9002",
@@ -43,14 +43,4 @@ func reverseProxy() []*Backend {
 	}
 
 	return backends
-
-	// fmt.Println(len(backends))
-	// fmt.Println(backends[0].URL)
-	// fmt.Println(backends[0].URL.Host)
-
-	// for i := 0; i <= 10; i++ {
-
-	// 	fmt.Println(nextBackend(backends).URL.Host)
-	// }
-
 }
