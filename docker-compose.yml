@@ -1,0 +1,53 @@
+# ============================================================
+#  Docker Compose — Go Load Balancer
+#  Runs 3 backend servers + 1 load balancer on an internal network
+# ============================================================
+
+services:
+  # ---- Backend Servers ----
+  backend-1:
+    build: .
+    entrypoint: ["/backend", ":9001"]
+    expose:
+      - "9001"
+    networks:
+      - lb-net
+    restart: unless-stopped
+
+  backend-2:
+    build: .
+    entrypoint: ["/backend", ":9002"]
+    expose:
+      - "9002"
+    networks:
+      - lb-net
+    restart: unless-stopped
+
+  backend-3:
+    build: .
+    entrypoint: ["/backend", ":9003"]
+    expose:
+      - "9003"
+    networks:
+      - lb-net
+    restart: unless-stopped
+
+  # ---- Load Balancer ----
+  loadbalancer:
+    build: .
+    entrypoint: ["/loadbalancer"]
+    ports:
+      - "8080:8080"
+    environment:
+      - BACKEND_URLS=http://backend-1:9001,http://backend-2:9002,http://backend-3:9003
+    depends_on:
+      - backend-1
+      - backend-2
+      - backend-3
+    networks:
+      - lb-net
+    restart: unless-stopped
+
+networks:
+  lb-net:
+    driver: bridge

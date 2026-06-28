@@ -28,6 +28,7 @@ A production-oriented **Layer 7 HTTP load balancer** written in pure Go with zer
 - [Design Decisions & Trade-offs](#design-decisions--trade-offs)
 - [What This Project Demonstrates](#what-this-project-demonstrates)
 - [Evaluation Guide for Recruiters](#evaluation-guide-for-recruiters)
+- [🐳 Docker](#-docker)
 - [Future Improvements](#future-improvements)
 
 ---
@@ -657,9 +658,111 @@ go build -o stresstest.exe ./cmd/stresstest
 
 ---
 
+## 🐳 Docker
+
+The project includes a **multi-stage Dockerfile** and **Docker Compose** configuration for one-command deployment.
+
+### Architecture in Docker
+
+```
+                    Host Machine
+                        │
+                   port 8080
+                        │
+              ┌─────────▼──────────┐
+              │   loadbalancer     │  Container (BACKEND_URLS env var)
+              │   :8080            │
+              └────┬────┬────┬─────┘
+                   │    │    │          lb-net (bridge network)
+         ┌─────────┘    │    └─────────┐
+         ▼              ▼              ▼
+   ┌───────────┐  ┌───────────┐  ┌───────────┐
+   │ backend-1 │  │ backend-2 │  │ backend-3 │
+   │ :9001     │  │ :9002     │  │ :9003     │
+   └───────────┘  └───────────┘  └───────────┘
+```
+
+### Quick Start
+
+```bash
+# Build and start the entire stack (3 backends + load balancer)
+docker compose up --build
+
+# Run in detached mode
+docker compose up --build -d
+```
+
+### Test It
+
+```bash
+# Send a request to the load balancer
+curl http://localhost:8080/
+
+# Observe round-robin across all 3 backends
+for i in $(seq 1 6); do curl -s http://localhost:8080/; echo; done
+```
+
+### View Logs
+
+```bash
+# All containers
+docker compose logs -f
+
+# Only the load balancer
+docker compose logs -f loadbalancer
+```
+
+### Stop & Cleanup
+
+```bash
+# Stop all containers
+docker compose down
+
+# Stop and remove volumes/images
+docker compose down --rmi all --volumes
+```
+
+### Build Individually
+
+```bash
+# Build the image without Compose
+docker build -t go-load-balancer .
+
+# Run just the load balancer (backends must be reachable)
+docker run -p 8080:8080 \
+  -e BACKEND_URLS="http://backend-1:9001,http://backend-2:9002,http://backend-3:9003" \
+  go-load-balancer
+
+# Run a backend
+docker run -p 9001:9001 go-load-balancer /backend :9001
+```
+
+### Stress Test in Docker
+
+```bash
+# Run the stress test tool against the running stack
+docker compose exec loadbalancer /stresstest \
+  -target http://localhost:8080 -c 100 -n 10000
+```
+
+### Image Details
+
+| Layer | Base Image | Purpose | Approx. Size |
+|---|---|---|---|
+| **Build stage** | `golang:1.26-alpine` | Compiles all 3 binaries with `CGO_ENABLED=0` | ~300 MB (discarded) |
+| **Runtime stage** | `scratch` | Runs the static binary — no OS, no shell | ~5 MB |
+
+### Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `BACKEND_URLS` | `http://localhost:9001,http://localhost:9002,http://localhost:9003` | Comma-separated list of backend URLs. Docker Compose sets this to use service names. |
+
+---
+
 ## Future Improvements
 
-- [ ] CLI flags or environment variables for backend URLs and listen port
+- [x] ~~CLI flags or environment variables for backend URLs and listen port~~ *(implemented via `BACKEND_URLS` env var)*
 - [ ] HTTP-based health checks (`GET /health`) for application-level validation
 - [ ] Weighted round-robin or least-connections algorithm
 - [ ] Graceful shutdown with `os.Signal` handling

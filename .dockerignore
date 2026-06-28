@@ -1,0 +1,27 @@
+# Version control
+.git
+.gitignore
+
+# IDE / Editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in build context)
+README.md
+LICENSE
+
+# Docker files (avoid recursive context)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Binaries (we build fresh inside the container)
+*.exe
+*.out
